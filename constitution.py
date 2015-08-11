@@ -71,7 +71,7 @@ class Section:
         self.Id = sectionId
         self.CountryName = countryName
         self.Name = sectionData['name']
-        self.Unit = sectionData['type']
+        self.Unit = sectionData['unit']
         self.Text = sectionData['text']
         self.Level = sectionData['level']
         self.Parent = sectionData['parent']
