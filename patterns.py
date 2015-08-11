@@ -20,6 +20,12 @@ def makePatterns(typeList):
 	numbers = "(\d+\.\d+|\d+\.[a-z]|\d+)"
 	rangeNumbers = numbers + "( ?- ?| to | up to | til )?" + numbers + "?"
 
+	# matching title units in section titles
+	patterns['title_preamble'] = re.compile("preamble")
+	patterns['title_unit_number'] = re.compile("(annex|art|article|chapter|division|part|schedule|sec|section|subdivision|title)[ \.](\d+[a-z]*)")
+	patterns['title_unit_roman'] = re.compile("(annex|art|article|chapter|division|part|schedule|sec|section|subdivision|title)[ \.]([ivxlcdm]+)")
+	patterns['title_number'] = re.compile("(\d+[a-z]*)[\.]*")
+
 	# ref = type + number
 	patterns['refStart'] = re.compile(types + rangeNumbers, re.IGNORECASE)
 	# ref sep|conj number
