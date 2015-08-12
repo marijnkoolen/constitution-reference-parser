@@ -6,7 +6,7 @@ def extract_refs(constitution, sentence):
 	sentenceDone = 0
 
 	# returns a dictionary of constitution specific patterns
-	pattern = patterns.makePatterns(constitution.RefUnits())
+	pattern = patterns.makeRefPatterns(constitution.RefUnits())
 	refList = ReferenceList(sentence, pattern)
 
 	while not sentenceDone:

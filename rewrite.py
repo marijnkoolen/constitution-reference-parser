@@ -117,17 +117,23 @@ def rewrite_text(text):
 		if mSubNum:
 			text = re.sub(subNum, " {0}".format(mSubNum.group(1)), text, 1, re.IGNORECASE)
 			done = 0
+	text = re.sub("(\W)[aA]rt[.]? ([0-9])", "\g<1>article \g<2>", text, re.IGNORECASE)
+	text = re.sub("(\W)[sS]ec[.]? ([0-9])", "\g<1>section \g<2>", text, re.IGNORECASE)
 	return text
 
 def rewrite_sweden(text):
-	chunk1 = 'the instrument of government'
-	chunk2 = 'the act of succession'
-	chunk3 = 'the freedom of the press act'
-	chunk4 = 'the fundamental law on freedom of expression'
-	chunk5 = 'the riksdag act'
-	text = re.sub(chunk1, 'Chunk 1', text, flags=re.IGNORECASE)
-	text = re.sub(chunk2, 'Chunk 2', text, flags=re.IGNORECASE)
-	text = re.sub(chunk3, 'Chunk 3', text, flags=re.IGNORECASE)
-	text = re.sub(chunk4, 'Chunk 4', text, flags=re.IGNORECASE)
-	text = re.sub(chunk5, 'Chunk 5', text, flags=re.IGNORECASE)
+	mapName = {}
+	mapName['the instrument of government'] = "the_instrument_of_goverment 1"
+	mapName['the act of succession'] = 'the_act_of_succession 1'
+	mapName['the freedom of the press act'] = 'the_freedom_of_the_press_act 1'
+	mapName['the fundamental law on freedom of expression'] = 'the_fundamental_law_on_freedom_of_expression 1'
+	mapName['the riksdag act'] = 'the_riksdag_act 1'
+	for name in mapName:
+		text = re.sub(name, mapName[name], text, flags=re.IGNORECASE)
+
+	#text = re.sub(chunk1, 'Chunk 1', text, flags=re.IGNORECASE)
+	#text = re.sub(chunk2, 'Chunk 2', text, flags=re.IGNORECASE)
+	#text = re.sub(chunk3, 'Chunk 3', text, flags=re.IGNORECASE)
+	#text = re.sub(chunk4, 'Chunk 4', text, flags=re.IGNORECASE)
+	#text = re.sub(chunk5, 'Chunk 5', text, flags=re.IGNORECASE)
 	return text

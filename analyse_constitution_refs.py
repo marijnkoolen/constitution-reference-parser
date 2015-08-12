@@ -1,22 +1,8 @@
-import re
-import json
-import nltk
-import sys
+import json, nltk, re, sys
 from constitution import Constitution, Section
-import extract
-import rewrite
-import resolve
+import extract, rewrite, resolve
 
-try:
-	inputfile = sys.argv[1]
-	identityfile = sys.argv[2]
-	referencefile = sys.argv[3]
-	missingRefFile = sys.argv[4]
-except IndexError:
-	print "\nRequires 4 arguments: \n<input file> <identity file> <reference file> <missing reference file>\n\n"
-	sys.exit()
-
-def read_constitution_data(fname):
+def read_constitution_data(fname, config):
 	with open(fname, 'rb') as reader:
 		data = json.loads(reader.read())
 
@@ -24,16 +10,16 @@ def read_constitution_data(fname):
 	for country in data:
 		if country == 'Sweden_2012':
 			fix_Sweden(data[country])
-		constitution = make_constitution(country, data[country])
+		constitution = make_constitution(country, data[country], config)
 		constitutions.append(constitution)
 	return constitutions
 
 
-def make_constitution(country, sections):
+def make_constitution(country, sections, config):
 	constitution = Constitution(country)
-	constitution.SetUnits(subUnitRefs, nonRefUnits, skipUnitRefs)
+	constitution.SetUnits(config['subUnitRefs'], config['nonRefUnits'], config['skipUnitRefs'])
 	for sectionId in sections:
-		section = Section(country, sectionId, sections[sectionId])
+		section = Section(sections[sectionId])
 		clean_text(section)
 		constitution.IndexUnit(section.Unit)
 		constitution.IndexSection(section)
@@ -68,10 +54,10 @@ def process_section(section, constitution):
 def fix_Sweden(sections):
 	for secId in sections:
 		section = sections[secId]
-		secName = section['name'].replace("_"," ")
+		#secName = section['name'].replace("_"," ")
 		section['text'] = rewrite.rewrite_sweden(section['text'])
-		secName = rewrite.rewrite_sweden(secName)
-		section['name'] = secName.replace(" ","_").lower().replace("chunk_","chunk.")
+		#secName = rewrite.rewrite_sweden(secName)
+		#section['name'] = secName.replace(" ","_").lower().replace("chunk_","chunk.")
 
 def get_pairs(items):
 	if items == []:
@@ -82,9 +68,9 @@ def get_pairs(items):
 	return headPairs + restPairs
 
 def parse_name(section, constitution):
-	parts = section.Name.split(partSeparator)
+	parts = section.Name.split("/")
 	constitution.IndexParts(parts, section.Id)
-	units = [part.split(unitSeparator)[0] for part in parts]
+	units = [re.sub("\[.*\]","", part) for part in parts]
 	for unit in units:
 		if unit == '':
 			continue
@@ -92,32 +78,32 @@ def parse_name(section, constitution):
 	unitPairs = get_pairs(units)
 	constitution.IndexUnitRelations(unitPairs)
 
-def write_identifiers(constitutions):
-	identifier = open(identityfile, 'wb')
+def write_identifiers(constitutions, identityFile):
+	identifier = open(identityFile, 'wb')
 	for constitution in constitutions:
 		for section in constitution.Sections():
 			if section.Unit == 'body' and section.Unit == 'UNKNOWN':
 				continue
-			country = constitution.CountryName.encode('utf-8')
+			constitutionName = section.Constitution.encode('utf-8')
 			sectionId = section.Id.encode('utf-8')
 			sectionName = section.Name.encode('utf-8')
-			identifier.write("{0}\t{1}\t{2}\n".format(country, sectionId, sectionName))
+			identifier.write("{0}\t{1}\t{2}\n".format(constitutionName, sectionId, sectionName))
 	identifier.close()
 
-def write_references(constitution):
-	referencer = open(referencefile, 'wb')
+def write_references(constitutions, referenceFile, missingRefFile):
+	referencer = open(referenceFile, 'wb')
 	misser = open(missingRefFile, 'wb')
 	for constitution in constitutions:
 		for reference in constitution.references:
 			sourceId = reference.SourceId.encode('utf-8')
 			sourceName = reference.SourceName.encode('utf-8')
-			sourceStart = constitution.offset[sourceId][0]
+			sourceStart = constitution.section[sourceId].StartOffset
 			targetId = reference.TargetId.encode('utf-8')
 			targetName = reference.TargetName.encode('utf-8')
 			if targetId == 'UNKNOWN':
 				targetStart = '-1'
 			else:
-				targetStart = constitution.offset[targetId][0]
+				targetStart = constitution.section[targetId].StartOffset
 			refString = "{0} {1} {2} {3} {4} {5} {6}\n".format(constitution.CountryName, sourceId, sourceName, sourceStart, targetId, targetName, targetStart)
 			if reference.status == 'resolved':
 				referencer.write(refString)
@@ -126,14 +112,25 @@ def write_references(constitution):
 	referencer.close()
 	misser.close()
 
-partSeparator = "__"
-unitSeparator = "."
+def main():
+	try:
+		inputfile = sys.argv[1]
+		identityFile = sys.argv[2]
+		referenceFile = sys.argv[3]
+		missingRefFile = sys.argv[4]
+	except IndexError:
+		print "\nRequires 4 arguments: \n<input file> <identity file> <reference file> <missing reference file>\n\n"
+		sys.exit()
 
-nonRefUnits = ['body','list_item','UNKNOWN']
-subUnitRefs = ['paragraph', 'sentence', 'point']
-skipUnitRefs = ['paragraph', 'sentence', 'point']
+	config = {}
+	config["nonRefUnits"] =  ['body','list_item','UNKNOWN']
+	config["subUnitRefs"] =  ['paragraph', 'sentence', 'point']
+	config["skipUnitRefs"] =  ['paragraph', 'sentence', 'point']
 
-constitutions = read_constitution_data(inputfile)
-write_identifiers(constitutions)
-process_constitutions(constitutions)
-write_references(constitutions)
+	constitutions = read_constitution_data(inputfile, config)
+	write_identifiers(constitutions, identityFile)
+	process_constitutions(constitutions)
+	write_references(constitutions, referenceFile, missingRefFile)
+
+if __name__ == "__main__":
+	main()

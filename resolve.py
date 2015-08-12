@@ -18,7 +18,7 @@ def resolve_refs(sourceId, refList, constitution):
             ref.TargetId = 'UNKNOWN'
             path = 'root'
             for partUnit, partNum in ref.TargetParts.iteritems():
-                path = path + "__" + partUnit + "." + partNum
+                path = path + "/" + partUnit + "[" + partNum + "]"
             ref.TargetName = path
         else:
             ref.status = 'resolved'
@@ -40,7 +40,7 @@ def find_target_section(sourceId, TargetParts, constitution):
 
 def filter_candidates(candidates, TargetParts, constitution):
     for TargetUnit, TargetNum in TargetParts.iteritems():
-        targetPart = TargetUnit + "." + TargetNum
+        targetPart = TargetUnit + "[" + TargetNum + "]"
         if targetPart not in constitution.partIndex:
             print "ERROR path chunk missing: {0}".format(targetPart)
             return []
@@ -95,7 +95,7 @@ def find_candidate_targets(leafUnit, leafNum, section):
     return candidates.values()
 
 def find_common_ancestor(sourceId, candidates, section):
-    sourceParts = section[sourceId].Name.split("__")
+    sourceParts = section[sourceId].Name.split("/")
     selected = candidates
     for sourcePart in sourceParts:
         remaining = []
@@ -112,14 +112,14 @@ def find_common_ancestor(sourceId, candidates, section):
             #print "candidates: {0}".format(selected)
             firstNum = None
             firstSec = None
-            for candidate in selected:
-                parts = candidate.split('-')
+            for candidateId in selected:
+                candidateNum = candidateId.replace('section-', '')
                 if not firstNum:
-                    firstNum = parts[1]
-                    firstSec = candidate
-                if firstNum and int(firstNum) > int(parts[1]):
-                    firstNum = parts[1]
-                    firstSec = candidate
+                    firstNum = candidateNum
+                    firstSec = candidateId
+                if firstNum and int(firstNum) > int(candidateNum):
+                    firstNum = candidateNum
+                    firstSec = candidateId
             # use first sec if need to pick one from multiple
             # best candidates
             selected = [firstSec]

@@ -12,14 +12,9 @@ class Constitution:
         self.ContainedBy = {}
         self.partIndex = {}
         self.references = []
-        self.offset = {}
-        self.textLength = 0
 
     def IndexSection(self, section):
         self.section[section.Id] = section
-        sectionLength = len(section.Text)
-        self.offset[section.Id] = (self.textLength, self.textLength+sectionLength)
-        self.textLength += sectionLength
 
     def Sections(self):
         return self.section.values()
@@ -67,22 +62,20 @@ class Constitution:
 
 class Section:
 
-    def __init__(self, countryName, sectionId, sectionData):
-        self.Id = sectionId
-        self.CountryName = countryName
+    def __init__(self, sectionData):
+        self.Id = sectionData['id']
+        self.Constitution = sectionData['constitution']
         self.Name = sectionData['name']
         self.Unit = sectionData['unit']
         self.Text = sectionData['text']
+        self.StartOffset = sectionData['start_offset']
+        self.EndOffset = sectionData['end_offset']
         self.Level = sectionData['level']
         self.Parent = sectionData['parent']
         self.Number = sectionData['number']
 
     def UpdateText(self, text):
         self.Text = text
-
-    def SetStartEend(self, textStart, textEnd):
-        self.TextStart = textStart
-        self.TextEnd = textEnd
 
 class ReferenceList:
 
