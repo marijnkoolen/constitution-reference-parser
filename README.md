@@ -12,6 +12,6 @@ The reference parser runs in two steps:
 
 To run the parser:
 
-> python parse_constitution_html.py <HTML-dir> <structure-dir>
-> python analyse_constitution_refs.py <structure-dir> <identifier-dir> <reference-dir> <missing-references-dir>
+> python parse_constitution_html.py HTML-dir -structure-dir
+> python analyse_constitution_refs.py +structure-dir -identifier-dir -reference-dir -missing-references-dir
 
