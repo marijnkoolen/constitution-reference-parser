@@ -5,4 +5,13 @@ This is part of the Legal Structures project, a Digging Into Data Challenge 2013
 
 The constitutions for this project are derived from the [Constitute Project](https://www.constituteproject.org/).
 
-The current parser is not complete, in that the initial step from raw HTML files to structured JSON documents of constitutions is not yet implemented in Python. 
+The reference parser runs in two steps:
+
+1. parsing the HTML files to extract the logical structure of constitutions and producing JSON output
+2. parsing the text units in the JSON files to extract and resolve references and producing CSV output of section identifiers, resolved references and unresolved references.
+
+To run the parser:
+
+> python parse_constitution_html.py <HTML-dir> <structure-dir>
+> python analyse_constitution_refs.py <structure-dir> <identifier-dir> <reference-dir> <missing-references-dir>
+
