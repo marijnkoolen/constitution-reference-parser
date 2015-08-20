@@ -41,6 +41,7 @@ class Constitution:
 
     def IndexUnitRelations(self, unitRelations):
         for ancestor, descendant in unitRelations:
+
             if ancestor not in self.Contains:
                 self.Contains[ancestor] = {}
             if descendant not in self.ContainedBy:
@@ -67,7 +68,8 @@ class Section:
         self.Constitution = sectionData['constitution']
         self.Name = sectionData['name']
         self.Unit = sectionData['unit']
-        self.Text = sectionData['text']
+        self.OriginalText = sectionData['text']
+        self.AnalyseText = sectionData['text_clean']
         self.StartOffset = sectionData['start_offset']
         self.EndOffset = sectionData['end_offset']
         self.Level = sectionData['level']
@@ -75,7 +77,7 @@ class Section:
         self.Number = sectionData['number']
 
     def UpdateText(self, text):
-        self.Text = text
+        self.AnalyseText = text
 
 class ReferenceList:
 

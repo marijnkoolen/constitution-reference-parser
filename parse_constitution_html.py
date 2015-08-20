@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
-import json, re, sys, os
+import roman
+import json, re, os
 import patterns, rewrite
 
 def get_unit(title):
@@ -17,6 +18,13 @@ def get_unit(title):
 			elif unitForm == 'title_number':
 				unit = "unspecified"
 				number = m.group(1)
+			elif unitForm == 'title_unit_roman':
+				unit = m.group(1)
+				try:
+					number = str(roman.fromRoman(m.group(2).upper()))
+				except roman.InvalidRomanNumeralError:
+					print "Invalid Roman title number:", title, "unit:", unit, "number:", number
+					number = m.group(2)
 			else:
 				unit = m.group(1)
 				number = m.group(2)
@@ -46,25 +54,31 @@ def parse_section(htmlSection):
 	classAttrs = htmlSection['class']
 	sectionData['level'] = int(classAttrs[1].replace("level",""))
 	currType = classAttrs[2].replace("article-","")
+	rewriter = rewrite.RewritePatterns()
 	if currType == 'title':
 		try:
 			sectionData['text'] = htmlSection.find(class_='float-left').text
-			cleanText = rewrite.rewrite_text(sectionData['text'].lower())
+			cleanText = rewriter.rewrite_text(sectionData['text'].lower())
 			sectionData['text_clean'] = cleanText
 			sectionData['unit'], sectionData['number'] = get_unit(cleanText)
 		except AttributeError:
-			sectionData['text'] = "untitled section " + htmlSection['id']
-			sectionData['unit'] = "untitled_section"
-			sectionData['number'] = htmlSection['id']
+			try:
+				firstParagraph = htmlSection.section.p.text
+				sectionData['unit'], sectionData['number'] = get_unit(firstParagraph)
+			except AttributeError:
+				sectionData['unit'] = "untitled_section"
+				sectionData['number'] = htmlSection['id']
+			sectionData['text'] = ""
+			sectionData['text_clean'] = ""
 	else:
 		sectionData['unit'] = 'body'
 		sectionData['number'] = '1'
 		sectionData['text'] = htmlSection.text
-		sectionData['text_clean'] = rewrite.rewrite_text(sectionData['text'].lower())
+		sectionData['text_clean'] = rewriter.rewrite_text(sectionData['text'].lower())
 	return sectionData
 
-def parse_constitution(constitution):
-	with open(constitution, 'rb') as fh:
+def parse_constitution(constitution, inputFile):
+	with open(inputFile, 'rb') as fh:
 		soup = BeautifulSoup(fh, "lxml")
 	textOffset = 0
 	section = {}
@@ -88,13 +102,14 @@ def parse_constitution(constitution):
 		specify_units(section)
 	return section
 
-def parse_constitutions(constitutions, outputFile):
-	constitutionSections = {}
-	for constitution in constitutions:
+def parse_constitutions(inputDir, outputDir):
+	for constitution in next(os.walk(inputDir))[2]:
+		inputFile = os.path.join(inputDir, constitution)
+		outputFile = os.path.join(outputDir, constitution) + ".json"
 		print "Parsing constitution", constitution, "..."
-		constitutionSections[constitution] = parse_constitution(constitution)
-	with open(outputFile, 'wb') as writer:
-		json.dump(constitutionSections, writer, indent=4)
+		sections = parse_constitution(constitution, inputFile)
+		with open(outputFile, 'wb') as writer:
+			json.dump(sections, writer, indent=4)
 
 def specify_units(section):
 	secCount = 0
@@ -112,21 +127,22 @@ def specify_units(section):
 
 def resolve_unspecified(secUnit, section):
 	for sectionId in section:
-		if 'unspecified' in section[sectionId]['name']:
-			section[sectionId]['name'] = section[sectionId]['name'].replace('unspecified', secUnit)
+		replaceUnit = secUnit
+		if replaceUnit in section[sectionId]['name']:
+			replaceUnit = "sub" + replaceUnit
+		while 'unspecified' in section[sectionId]['name']:
+			section[sectionId]['name'] = section[sectionId]['name'].replace('unspecified', replaceUnit, 1)
+			replaceUnit = "sub" + replaceUnit
+		replaceUnit = replaceUnit.replace("sub", "", 1)
 		if 'unspecified' in section[sectionId]['unit']:
-			section[sectionId]['unit'] = section[sectionId]['unit'].replace('unspecified', secUnit)
+			section[sectionId]['unit'] = section[sectionId]['unit'].replace('unspecified', replaceUnit, 1)
 
 
 
-def main():
-	# my code here
-	constitutionDir = sys.argv[1]
-	outputFile = sys.argv[2]
-	_, _, constitutions = next(os.walk(constitutionDir), (None, None, []))
-	constitutions = [os.path.join(constitutionDir,fn) for fn in next(os.walk(constitutionDir))[2]]
-	parse_constitutions(constitutions, outputFile)
+def main(script, constitutionDir, outputDir):
+	parse_constitutions(constitutionDir, outputDir)
 
 if __name__ == "__main__":
-	main()
+	import sys
+	main(*sys.argv)
 

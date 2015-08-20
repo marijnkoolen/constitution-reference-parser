@@ -2,12 +2,14 @@ import re
 
 def resolve_refs(sourceId, refList, constitution):
     for ref in refList.identified:
+        ref.SourceId = sourceId
         # text sections are the body elements within the
         # section header elements, so use the parent of the
         # body section as the source
-        ref.SourceId = constitution.section[sourceId].Parent
-        if ref.SourceId == 'section-0':
-            ref.SourceId = sourceId
+        if constitution.section[sourceId].Unit == 'body':
+            ref.SourceId = constitution.section[sourceId].Parent
+        #if ref.SourceId == 'section-0':
+        #    ref.SourceId = sourceId
         ref.SourceName = constitution.section[sourceId].Name
         ref.TargetId = find_target_section(sourceId, ref.TargetParts, constitution)
 
@@ -35,6 +37,9 @@ def find_target_section(sourceId, TargetParts, constitution):
     # based on unit and number of leaf part
     candidates = find_candidate_targets(leafUnit, leafNum, constitution.section)
     candidates = filter_candidates(candidates, TargetParts, constitution)
+    if candidates == []:
+        print "ERROR *** no candidates found with target parts:", TargetParts, "in", constitution.CountryName, sourceId
+        return None
     targetId = find_common_ancestor(sourceId, candidates, constitution.section)
     return targetId
 
@@ -42,7 +47,7 @@ def filter_candidates(candidates, TargetParts, constitution):
     for TargetUnit, TargetNum in TargetParts.iteritems():
         targetPart = TargetUnit + "[" + TargetNum + "]"
         if targetPart not in constitution.partIndex:
-            print "ERROR path chunk missing: {0}".format(targetPart)
+            print "ERROR path chunk missing: {0} {1}".format(constitution.CountryName, targetPart)
             return []
         # filter candidate target sections that
         # don't share all known target parts
@@ -78,8 +83,6 @@ def find_candidate_targets(leafUnit, leafNum, section):
     candidates = {}
     for sectionId in section:
         if section[sectionId].Unit == leafUnit:
-            if type(section[sectionId].Number) != type(leafNum):
-                print "ERROR *** different data types"
             if section[sectionId].Number == leafNum:
                 sectionName = section[sectionId].Name
                 # occasionally, multiple sections have the same
@@ -102,17 +105,18 @@ def find_common_ancestor(sourceId, candidates, section):
         for candidate in selected:
             if sourcePart in section[candidate].Name:
                 remaining.append(candidate)
-                #print "PARTIAL MATCH: sourcePart: {0}\tcandidate path: {1}".format(sourcePart, section[candidate].Name)
-        if (len(remaining) == 1):
-            #print "FINAL MATCH: {0} {1}".format(section[sourceId].Name, section[candidate].Name)
+        if len(remaining) == 1:
             return remaining[0]
-        if (len(remaining) == 0):
-            print "ERROR *** multiple best candidates, picking first"
-            #print "current path: {0}".format(section[sourceId].Name)
-            #print "candidates: {0}".format(selected)
+        if len(remaining) == 0:
+            remaining = find_lowest_level(selected, section)
+            if len(remaining) == 1:
+                return remaining[0]
+            print "ERROR *** multiple best candidates, picking first in {0} {1}".format(section[sourceId].Constitution, sourceId)
             firstNum = None
             firstSec = None
-            for candidateId in selected:
+            for candidateId in remaining:
+                pathDepth = len(section[candidateId].Name.split("/"))
+                print "candidate:", section[candidateId].Name, "pathDepth", pathDepth, "level", section[candidateId].Level
                 candidateNum = candidateId.replace('section-', '')
                 if not firstNum:
                     firstNum = candidateNum
@@ -120,12 +124,24 @@ def find_common_ancestor(sourceId, candidates, section):
                 if firstNum and int(firstNum) > int(candidateNum):
                     firstNum = candidateNum
                     firstSec = candidateId
-            # use first sec if need to pick one from multiple
-            # best candidates
-            selected = [firstSec]
+            print
+            # if there are multiple best candidates, pick first in document order
+            return firstSec
             # if there are multiple best candidates, pick none
             return None
         selected = remaining
+
+def find_lowest_level(candidates, section):
+    remaining = []
+    levels = []
+    for candidateId in candidates:
+        levels.append(int(section[candidateId].Level))
+    lowest = min(levels)
+    for candidateId in candidates:
+        if int(section[candidateId].Level) == lowest:
+            remaining.append(candidateId)
+    return remaining
+
 
 def precedes(sectionId1, sectionId2):
     m1 = re.match('section-(\d+)', sectionId1)

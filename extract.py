@@ -173,6 +173,8 @@ def addToRefList(refType, refNums, refList):
 
 def makeRange(num1, rangeSymbol, num2):
 	if rangeSymbol and num2:
+		if int(num2) < int(num1):
+			return [num1]
 		return [unicode(num) for num in range(int(num1), int(num2)+1)]
 	return [num1]
 

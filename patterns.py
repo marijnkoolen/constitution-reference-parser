@@ -9,13 +9,13 @@ def makeTitlePatterns():
 	# matching title units in section titles
 	titlePatterns = {}
 	titlePatterns['title_preamble'] = re.compile("(preamble)")
-	titlePatterns['title_unit_number'] = re.compile("(annex|art|article|chapter|division|part|schedule|sec|section|subdivision|title)[ \.](\d+[a-z]*)")
-	titlePatterns['title_unit_roman'] = re.compile("(annex|art|article|chapter|division|part|schedule|sec|section|subdivision|title)[ \.]([ivxlcdm]+)")
+	titlePatterns['title_unit_number'] = re.compile("(annex|art|article|chapter|division|part|schedule|section|sec|subdivision|title)[ \.](\d+[a-z]*)")
+	titlePatterns['title_unit_roman'] = re.compile("(annex|art|article|chapter|division|part|schedule|section|sec|subdivision|title)[ \.]([ivxlcdm]+)")
 	titlePatterns['title_number'] = re.compile("(\d+[a-z]*)[\.]*")
 	return titlePatterns
 
 def makeRefPatterns(typeList):
-	types = "(" + "|".join(typeList) + ")s? "
+	types = "\\b(" + "|".join(typeList) + ")s? "
 	conj = "( and |, and | or |, or )?"
 	part = "( of | from | in )?"
 	sep = "(, |; )?"
