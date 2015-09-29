@@ -1,9 +1,10 @@
 
-class Constitution:
+class Document:
 
 
-    def __init__(self, countryName):
-        self.CountryName = countryName
+    def __init__(self, docType, docName):
+        self.DocType = docType
+        self.DocName = docName
         self.section = {}
         self.hasRefUnit = {}
         self.hasNonRefUnit = {}
@@ -65,14 +66,15 @@ class Section:
 
     def __init__(self, sectionData):
         self.Id = sectionData['id']
-        self.Constitution = sectionData['constitution']
-        self.Name = sectionData['name']
+        self.DocName = sectionData['doc_name']
+        self.DocType = sectionData['doc_type']
+        self.Path = sectionData['path']
         self.Unit = sectionData['unit']
         self.OriginalText = sectionData['text']
         self.AnalyseText = sectionData['text_clean']
         self.StartOffset = sectionData['start_offset']
         self.EndOffset = sectionData['end_offset']
-        self.Level = sectionData['level']
+        self.Depth = sectionData['depth']
         self.Parent = sectionData['parent']
         self.Number = sectionData['number']
 
@@ -114,9 +116,9 @@ class ReferenceList:
 class Reference:
     def __init__(self):
         self.SourceId = ''
-        self.SourceName = ''
+        self.SourcePath = ''
         self.TargetId = ''
-        self.TargetName = ''
+        self.TargetPath = ''
         self.TargetParts = {}
         self.status = 'unresolved'
 
@@ -125,9 +127,9 @@ class Reference:
 
     def CopyFrom(self, reference):
         self.SourceId = reference.SourceId
-        self.SourceName = reference.SourceName
+        self.SourcePath = reference.SourcePath
         self.TargetId = reference.TargetId
-        self.TargetName = reference.TargetName
+        self.TargetPath = reference.TargetPath
         for partUnit in reference.TargetParts:
             partNum = reference.TargetParts[partUnit]
             self.TargetParts[partUnit] = partNum
