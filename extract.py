@@ -1,21 +1,21 @@
 import re
 import patterns
-from constitution import ReferenceList, Reference
+from document import ReferenceList, Reference
 
-def extract_refs(constitution, sentence):
+def extract_refs(document, sentence):
 	sentenceDone = 0
 
-	# returns a dictionary of constitution specific patterns
-	pattern = patterns.makeRefPatterns(constitution.RefUnits())
+	# returns a dictionary of document specific patterns
+	pattern = patterns.makeRefPatterns(document.RefUnits())
 	refList = ReferenceList(sentence, pattern)
 
 	while not sentenceDone:
 		# Start of a reference
 		matchStart = re.search(refList.pattern['refStart'], refList.sentence)
 		if matchStart:
-			extract_start_ref(matchStart, refList, constitution)
+			extract_start_ref(matchStart, refList, document)
 			while pattern['refDummy'] in refList.sentence:
-				extract_sequence_refs(refList, constitution)
+				extract_sequence_refs(refList, document)
 		else:
 			# assumption: there is no reference in this sentence
 			# action: signal extraction is done
@@ -24,22 +24,22 @@ def extract_refs(constitution, sentence):
 		# check if this is a complex reference sequence
 	return refList
 
-def extract_start_ref(matchStart, refList, constitution):
+def extract_start_ref(matchStart, refList, document):
 	refList.sentence = re.sub(matchStart.group(0), refList.pattern['refDummy'], refList.sentence, 1)
 	refType, num1, rangeSymbol, num2 = matchStart.groups()
 	refType = refType.lower()
 	refNums = makeRange(num1, rangeSymbol, num2)
-	if refType in constitution.SkipUnits:
+	if refType in document.SkipUnits:
 		refList.sentence = re.sub(refList.pattern['refDummy'], "", refList.sentence, 1)
 		return 0
 	addToRefList(refType, refNums, refList)
 	refList.UpdatePrev(refType)
 	return 0
 
-def extract_sequence_refs(refList, constitution):
+def extract_sequence_refs(refList, document):
 	refNums = []
 	refType = None
-	sep, conj, part, refType, refNums = findSequenceType(refList, constitution)
+	sep, conj, part, refType, refNums = findSequenceType(refList, document)
 	if refNums == []:
 		# assumption: if there is no next pattern, the sequence is done
 		# action: remove the reference dummy
@@ -51,25 +51,25 @@ def extract_sequence_refs(refList, constitution):
 		refType = refType.lower()
 		# if found type is too deep in hierarchy, ignore it
 		# e.g. we don't consider paragraphs and refList.sentences as part of the reference
-		if refType in constitution.SkipUnits:
+		if refType in document.SkipUnits:
 			refList.UpdatePrev(refType)
 			return 0
 	elif refType == None:
 		# if previous type is too deep in hierarchy, ignore it
 		# e.g. we don't consider paragraphs and refList.sentences as part of the reference
-		if refList.prevUnit in constitution.SkipUnits:
+		if refList.prevUnit in document.SkipUnits:
 			refNums = []
 	if sep:
-		parse_separator_ref(refType, refNums, refList, constitution)
+		parse_separator_ref(refType, refNums, refList, document)
 	elif conj:
-		parse_conjunction_ref(refType, refNums, refList, constitution)
+		parse_conjunction_ref(refType, refNums, refList, document)
 	elif part:
 		parse_part_of_ref(refType, refNums, refList)
 	if refType != None:
 		refList.UpdatePrev(refType)
 
 
-def findSequenceType(refList, constitution):
+def findSequenceType(refList, document):
 	mSepConjNumber = re.search(refList.pattern['refSepConjNumber'], refList.sentence)
 	mSepConjPartTypeNumber = re.search(refList.pattern['refSepConjPartTypeNumber'], refList.sentence)
 	sep = None
@@ -88,7 +88,7 @@ def findSequenceType(refList, constitution):
 
 	return (sep, conj, part, refType, refNums)
 
-def parse_separator_ref(refType, refNums, refList, constitution):
+def parse_separator_ref(refType, refNums, refList, document):
 	# 1. ref sep number -> new ref of same type
 	# assumption: type of new ref is implicit
 	# action: add refs similar to previous type
@@ -101,7 +101,7 @@ def parse_separator_ref(refType, refNums, refList, constitution):
 	# 3. ref sep type number -> specification of existing ref
 	# assumption: hierarchical relations are written from high to low
 	# action: replace previous reference with hierarchical reference
-	elif refType in constitution.ContainedBy and refList.prevUnit in constitution.ContainedBy[refType]:
+	elif refType in document.ContainedBy and refList.prevUnit in document.ContainedBy[refType]:
 		prevRef = refList.Last()
 		refList.RemoveLast()
 		for refNum in refNums:
@@ -115,7 +115,7 @@ def parse_separator_ref(refType, refNums, refList, constitution):
 	else:
 		addToRefList(refType, refNums, refList)
 
-def parse_conjunction_ref(refType, refNums, refList, constitution):
+def parse_conjunction_ref(refType, refNums, refList, document):
 	# ref conj number -> ref
 	# assumptions:
 	# 1. no mention of type suggests these are
@@ -132,7 +132,7 @@ def parse_conjunction_ref(refType, refNums, refList, constitution):
 	#    type
 	elif refType == refList.prevUnit:
 		prevRef = refList.Last()
-		for container in constitution.ContainedBy[refType]:
+		for container in document.ContainedBy[refType]:
 			if container in prevRef.TargetParts:
 				for refNum in refNums:
 					reference = Reference()

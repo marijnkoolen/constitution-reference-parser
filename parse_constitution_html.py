@@ -34,15 +34,15 @@ def get_unit(title):
 
 def update_stacks(sectionData, idStack, partStack):
 	currPart = sectionData['unit'] + "[" + sectionData['number'] + "]"
-	prevLevel = len(idStack) - 2
-	if sectionData['level'] == prevLevel:
+	prevDepth = len(idStack) - 2
+	if sectionData['depth'] == prevDepth:
 		idStack[-1] = sectionData['id']
 		partStack[-1] = currPart
-	elif sectionData['level'] > prevLevel:
+	elif sectionData['depth'] > prevDepth:
 		idStack.append(sectionData['id'])
 		partStack.append(currPart)
-	elif sectionData['level'] < prevLevel:
-		for i in range(0, prevLevel - sectionData['level']):
+	elif sectionData['depth'] < prevDepth:
+		for i in range(0, prevDepth - sectionData['depth']):
 			idStack.pop()
 			partStack.pop()
 		partStack[-1] = currPart
@@ -52,7 +52,7 @@ def parse_section(htmlSection):
 	sectionData = {}
 	sectionData['id'] = 'section-' + str(htmlSection['id'])
 	classAttrs = htmlSection['class']
-	sectionData['level'] = int(classAttrs[1].replace("level",""))
+	sectionData['depth'] = int(classAttrs[1].replace("level",""))
 	currType = classAttrs[2].replace("article-","")
 	rewriter = rewrite.RewritePatterns()
 	if currType == 'title':
@@ -105,7 +105,7 @@ def parse_constitution(constitution, inputFile):
 def parse_constitutions(inputDir, outputDir):
 	for constitution in next(os.walk(inputDir))[2]:
 		inputFile = os.path.join(inputDir, constitution)
-		outputFile = os.path.join(outputDir, constitution) + ".json"
+		outputFile = os.path.join(outputDir, "constitution." + constitution) + ".json"
 		print "Parsing constitution", constitution, "..."
 		sections = parse_constitution(constitution, inputFile)
 		with open(outputFile, 'wb') as writer:
@@ -144,5 +144,8 @@ def main(script, constitutionDir, outputDir):
 
 if __name__ == "__main__":
 	import sys
+	if len(sys.argv) != 3:
+		print "\n\tUsage: <HTML dir> <structure dir>\n\n"
+		sys.exit()
 	main(*sys.argv)
 

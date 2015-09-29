@@ -1,17 +1,17 @@
 import re
 
-def resolve_refs(sourceId, refList, constitution):
+def resolve_refs(sourceId, refList, document):
     for ref in refList.identified:
         ref.SourceId = sourceId
         # text sections are the body elements within the
         # section header elements, so use the parent of the
         # body section as the source
-        if constitution.section[sourceId].Unit == 'body':
-            ref.SourceId = constitution.section[sourceId].Parent
+        if document.section[sourceId].Unit == 'body':
+            ref.SourceId = document.section[sourceId].Parent
         #if ref.SourceId == 'section-0':
         #    ref.SourceId = sourceId
-        ref.SourceName = constitution.section[sourceId].Name
-        ref.TargetId = find_target_section(sourceId, ref.TargetParts, constitution)
+        ref.SourcePath = document.section[sourceId].Path
+        ref.TargetId = find_target_section(sourceId, ref.TargetParts, document)
 
         # if there is no target id, the reference
         # remains unresolved, add target parts to
@@ -21,38 +21,38 @@ def resolve_refs(sourceId, refList, constitution):
             path = 'root'
             for partUnit, partNum in ref.TargetParts.iteritems():
                 path = path + "/" + partUnit + "[" + partNum + "]"
-            ref.TargetName = path
+            ref.TargetPath = path
         else:
             ref.status = 'resolved'
-            ref.TargetName = constitution.section[ref.TargetId].Name
+            ref.TargetPath = document.section[ref.TargetId].Path
         # Self-references have separate status
         if ref.TargetId == ref.SourceId:
             ref.status = 'self-reference'
 
-def find_target_section(sourceId, TargetParts, constitution):
-    leafUnit, leafNum = find_most_specific(TargetParts, constitution.ContainedBy)
+def find_target_section(sourceId, TargetParts, document):
+    leafUnit, leafNum = find_most_specific(TargetParts, document.ContainedBy)
     if not leafUnit:
         return None
     # Get initial candidate target sections
     # based on unit and number of leaf part
-    candidates = find_candidate_targets(leafUnit, leafNum, constitution.section)
-    candidates = filter_candidates(candidates, TargetParts, constitution)
+    candidates = find_candidate_targets(leafUnit, leafNum, document.section)
+    candidates = filter_candidates(candidates, TargetParts, document)
     if candidates == []:
-        print "ERROR *** no candidates found with target parts:", TargetParts, "in", constitution.CountryName, sourceId
+        print "ERROR *** no candidates found with target parts:", TargetParts, "in", document.DocName, sourceId
         return None
-    targetId = find_common_ancestor(sourceId, candidates, constitution.section)
+    targetId = find_common_ancestor(sourceId, candidates, document.section)
     return targetId
 
-def filter_candidates(candidates, TargetParts, constitution):
+def filter_candidates(candidates, TargetParts, document):
     for TargetUnit, TargetNum in TargetParts.iteritems():
         targetPart = TargetUnit + "[" + TargetNum + "]"
-        if targetPart not in constitution.partIndex:
-            print "ERROR path chunk missing: {0} {1}".format(constitution.CountryName, targetPart)
+        if targetPart not in document.partIndex:
+            print "ERROR path chunk missing: {0} {1}".format(document.DocName.encode("utf8"), targetPart.encode("utf8"))
             return []
         # filter candidate target sections that
         # don't share all known target parts
         else:
-            targetPartSections = constitution.PartInSection(targetPart)
+            targetPartSections = document.PartInSection(targetPart)
             filtered = intersection(candidates, targetPartSections)
         if len(filtered) > 0:
             candidates = filtered
@@ -84,39 +84,39 @@ def find_candidate_targets(leafUnit, leafNum, section):
     for sectionId in section:
         if section[sectionId].Unit == leafUnit:
             if section[sectionId].Number == leafNum:
-                sectionName = section[sectionId].Name
+                sectionPath = section[sectionId].Path
                 # occasionally, multiple sections have the same
-                # sectionName name (e.g. two version of the same article)
+                # sectionPath name (e.g. two version of the same article)
                 # in those cases, choose the first section in section
                 # order.
                 # See e.g. France article number 11
-                if sectionName in candidates:
-                    if precedes(sectionId, candidates[sectionName]):
-                        candidates[sectionName] = sectionId
-                #print "candidate:", sectionName
-                candidates[sectionName] = sectionId
+                if sectionPath in candidates:
+                    if precedes(sectionId, candidates[sectionPath]):
+                        candidates[sectionPath] = sectionId
+                #print "candidate:", sectionPath
+                candidates[sectionPath] = sectionId
     return candidates.values()
 
 def find_common_ancestor(sourceId, candidates, section):
-    sourceParts = section[sourceId].Name.split("/")
+    sourceParts = section[sourceId].Path.split("/")
     selected = candidates
     for sourcePart in sourceParts:
         remaining = []
         for candidate in selected:
-            if sourcePart in section[candidate].Name:
+            if sourcePart in section[candidate].Path:
                 remaining.append(candidate)
         if len(remaining) == 1:
             return remaining[0]
         if len(remaining) == 0:
-            remaining = find_lowest_level(selected, section)
+            remaining = find_lowest_depth(selected, section)
             if len(remaining) == 1:
                 return remaining[0]
-            print "ERROR *** multiple best candidates, picking first in {0} {1}".format(section[sourceId].Constitution, sourceId)
+            print "ERROR *** multiple best candidates, picking first in {0} {1}".format(section[sourceId].DocName, sourceId)
             firstNum = None
             firstSec = None
             for candidateId in remaining:
-                pathDepth = len(section[candidateId].Name.split("/"))
-                print "candidate:", section[candidateId].Name, "pathDepth", pathDepth, "level", section[candidateId].Level
+                pathDepth = len(section[candidateId].Path.split("/"))
+                print "candidate:", section[candidateId].Path, "pathDepth", pathDepth, "depth", section[candidateId].Depth
                 candidateNum = candidateId.replace('section-', '')
                 if not firstNum:
                     firstNum = candidateNum
@@ -131,14 +131,14 @@ def find_common_ancestor(sourceId, candidates, section):
             return None
         selected = remaining
 
-def find_lowest_level(candidates, section):
+def find_lowest_depth(candidates, section):
     remaining = []
-    levels = []
+    depths = []
     for candidateId in candidates:
-        levels.append(int(section[candidateId].Level))
-    lowest = min(levels)
+        depths.append(int(section[candidateId].Depth))
+    lowest = min(depths)
     for candidateId in candidates:
-        if int(section[candidateId].Level) == lowest:
+        if int(section[candidateId].Depth) == lowest:
             remaining.append(candidateId)
     return remaining
 

@@ -43,6 +43,11 @@ class RewritePatterns:
 			"eighteenth": '18',
 			"nineteenth": '19',
 			"twentieth": '20',
+			"twenty-first": '21',
+			"twenty-second": '22',
+			"twenty-third": '23',
+			"twenty-fourth": '24',
+			"twenty-fifth": '25',
 			"twenty-sixth": '26',
 		}
 
@@ -115,6 +120,8 @@ class RewritePatterns:
 
 
 	def rewrite_text(self, text):
+		if not text:
+			return text
 		text = self.rewrite_rank_words(text)
 		text = self.rewrite_count_words(text)
 		text = self.rewrite_roman_numerals(text)
